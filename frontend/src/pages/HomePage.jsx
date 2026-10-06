@@ -73,7 +73,6 @@ export default function HomePage() {
         setCourses(updated)
       }
     } catch {
-      // Backend not reached, keep default ELECTIVE_COURSES
       setBackendConnected(false)
     } finally {
       setIsSyncing(false)
@@ -133,60 +132,35 @@ export default function HomePage() {
 
   return (
     <div className="sheets-container">
-      {/* Top bar */}
+      {/* Top bar (Caesar Cluster Terracotta Theme) */}
       <header className="sheets-topbar">
         <div className="sheets-topbar-left">
-          <div className="sheets-icon" title="REG Sync Spreadsheet">
-            📊
+          <div className="sheets-brand-badge" title="Caesar Cluster">
+            C
           </div>
-          <div>
-            <div className="sheets-filename">
-              <span>วิชาเลือกสาขาวิศวกรรมศาสตร์</span>
-              <span
-                className={`status-badge ${isSyncing ? 'syncing' : ''}`}
-                title={backendConnected ? 'เชื่อมต่อฐานข้อมูล REG สำเร็จ' : 'แสดงข้อมูลจากหลักสูตร'}
-              >
-                {isSyncing
-                  ? 'กำลังซิงค์...'
-                  : backendConnected
-                  ? '● ซิงค์กับ REG แล้ว'
-                  : 'โหมดออฟไลน์ (Master Data)'}
-              </span>
-            </div>
+          <div className="sheets-brand-info">
+            <span className="sheets-brand-title">Caesar Cluster</span>
+            <span className="sheets-brand-sub">Cloud for CPE · วิชาเลือกวิศวกรรมคอมพิวเตอร์ (REG Sync)</span>
           </div>
         </div>
 
         <div className="sheets-topbar-right">
-          <div className="search-box">
-            <span>🔍</span>
-            <input
-              type="text"
-              placeholder="ค้นหารหัส หรือชื่อวิชา..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  color: '#94A3B8',
-                  fontSize: 14,
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
+          <span
+            className={`status-badge ${isSyncing ? 'syncing' : ''}`}
+            title={backendConnected ? 'เชื่อมต่อฐานข้อมูล REG สำเร็จ' : 'แสดงข้อมูลจากหลักสูตร'}
+          >
+            {isSyncing
+              ? '● กำลังซิงค์ข้อมูล...'
+              : backendConnected
+              ? '● ซิงค์กับ REG มทส. แล้ว'
+              : '● โหมด Master Data'}
+          </span>
 
           <button
             type="button"
             className="btn-refresh"
             onClick={syncWithBackend}
-            title="รีเฟรชข้อมูล"
+            title="รีเฟรชข้อมูลล่าสุด"
             disabled={isSyncing}
           >
             ↻ {isSyncing ? 'กำลังโหลด...' : 'รีเฟรช'}
@@ -197,6 +171,35 @@ export default function HomePage() {
       {/* Main Sheet View */}
       <main className="sheet-content">
         <h1 className="sheet-title">{pageTitle}</h1>
+
+        {/* Full-width Search Bar placed directly under the title, spanning to the table */}
+        <div className="sheet-search-wrapper">
+          <div className="search-bar-full">
+            <span className="search-bar-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="ค้นหารหัสวิชา หรือชื่อวิชา เช่น ENG23 3012, Machine Learning, โครงงาน..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus={false}
+            />
+            {search && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearch('')}
+                title="ล้างข้อความค้นหา"
+              >
+                ✕
+              </button>
+            )}
+            <span className="search-count-pill">
+              แสดง {filteredCourses.length} จาก {courses.length} วิชา
+            </span>
+          </div>
+        </div>
+
+        {/* Course Table */}
         <CourseTable items={filteredCourses} />
       </main>
 
