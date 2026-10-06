@@ -1,4 +1,5 @@
 import React from 'react'
+import { MenuIcon, ChevronDownIcon } from './Icons.jsx'
 
 export default function SheetTabs({ activeTab, onSelectTab, counts }) {
   const tabs = [
@@ -11,7 +12,7 @@ export default function SheetTabs({ activeTab, onSelectTab, counts }) {
   return (
     <footer className="sheets-bottombar">
       <button className="sheets-menu-btn" title="รายการแผ่นงาน" type="button">
-        ≡
+        <MenuIcon size={18} />
       </button>
 
       <div className="sheet-tab-list">
@@ -25,7 +26,9 @@ export default function SheetTabs({ activeTab, onSelectTab, counts }) {
               onClick={() => onSelectTab(tab.id)}
             >
               <span>{tab.label}</span>
-              <span className="tab-arrow">▼</span>
+              <span className="tab-arrow">
+                <ChevronDownIcon size={10} />
+              </span>
             </button>
           )
         })}

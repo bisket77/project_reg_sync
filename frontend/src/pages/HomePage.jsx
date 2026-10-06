@@ -3,6 +3,7 @@ import CourseTable from '../components/CourseTable.jsx'
 import SheetTabs from '../components/SheetTabs.jsx'
 import { ELECTIVE_COURSES } from '../data/electivesData.js'
 import { getCourses, getStatus } from '../services/api.js'
+import { SearchIcon, RefreshIcon, CloseIcon, StatusDotIcon } from '../components/Icons.jsx'
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('ALL') // 'ALL', '1', '2', '3'
@@ -130,6 +131,17 @@ export default function HomePage() {
     })
   }, [courses, activeTab, search])
 
+  // Status badge config
+  const statusConfig = useMemo(() => {
+    if (isSyncing) {
+      return { text: 'กำลังซิงค์ข้อมูล...', color: '#D97706' }
+    }
+    if (backendConnected) {
+      return { text: 'ซิงค์กับ REG มทส. แล้ว', color: '#16A34A' }
+    }
+    return { text: 'โหมด Master Data', color: '#B95C44' }
+  }, [isSyncing, backendConnected])
+
   return (
     <div className="sheets-container">
       {/* Top bar (Caesar Cluster Terracotta Theme) */}
@@ -149,11 +161,8 @@ export default function HomePage() {
             className={`status-badge ${isSyncing ? 'syncing' : ''}`}
             title={backendConnected ? 'เชื่อมต่อฐานข้อมูล REG สำเร็จ' : 'แสดงข้อมูลจากหลักสูตร'}
           >
-            {isSyncing
-              ? '● กำลังซิงค์ข้อมูล...'
-              : backendConnected
-              ? '● ซิงค์กับ REG มทส. แล้ว'
-              : '● โหมด Master Data'}
+            <StatusDotIcon size={8} color={statusConfig.color} />
+            <span>{statusConfig.text}</span>
           </span>
 
           <button
@@ -163,7 +172,8 @@ export default function HomePage() {
             title="รีเฟรชข้อมูลล่าสุด"
             disabled={isSyncing}
           >
-            ↻ {isSyncing ? 'กำลังโหลด...' : 'รีเฟรช'}
+            <RefreshIcon size={14} spin={isSyncing} />
+            <span>{isSyncing ? 'กำลังโหลด...' : 'รีเฟรช'}</span>
           </button>
         </div>
       </header>
@@ -175,7 +185,9 @@ export default function HomePage() {
         {/* Full-width Search Bar placed directly under the title, spanning to the table */}
         <div className="sheet-search-wrapper">
           <div className="search-bar-full">
-            <span className="search-bar-icon">🔍</span>
+            <span className="search-bar-icon">
+              <SearchIcon size={18} />
+            </span>
             <input
               type="text"
               placeholder="ค้นหารหัสวิชา หรือชื่อวิชา เช่น ENG23 3012, Machine Learning, โครงงาน..."
@@ -190,7 +202,7 @@ export default function HomePage() {
                 onClick={() => setSearch('')}
                 title="ล้างข้อความค้นหา"
               >
-                ✕
+                <CloseIcon size={12} />
               </button>
             )}
             <span className="search-count-pill">
