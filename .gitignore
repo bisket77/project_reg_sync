@@ -1,0 +1,8 @@
+.env
+.env.*
+*.env
+backend/.env
+node_modules/
+dist/
+*.exe
+.vscode/
