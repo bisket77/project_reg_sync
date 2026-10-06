@@ -13,68 +13,100 @@ export default function HomePage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [backendConnected, setBackendConnected] = useState(false)
 
-  // Fetch status and sync with backend DB if available
+  const applyScrapedCourses = (scrapedItems) => {
+    const scrapedByCode = new Map()
+    scrapedItems.forEach((c) => {
+      const normCode = (c.code || '').replace(/\s+/g, '').toUpperCase()
+      if (!normCode) return
+      if (!scrapedByCode.has(normCode)) {
+        scrapedByCode.set(normCode, new Set())
+      }
+      if (c.semester) {
+        scrapedByCode.get(normCode).add(String(c.semester))
+      }
+    })
+
+    const updated = ELECTIVE_COURSES.map((master) => {
+      const normCode = master.code.replace(/\s+/g, '').toUpperCase()
+      const termSet = scrapedByCode.get(normCode)
+
+      if (!termSet || termSet.size === 0) {
+        return master
+      }
+
+      const terms = Array.from(termSet).sort()
+      let termDisplay = 'ไม่มีข้อมูล'
+
+      if (terms.includes('1') && terms.includes('2') && terms.includes('3')) {
+        termDisplay = 'เปิดทุกเทอม'
+      } else if (terms.length === 1) {
+        termDisplay = `เทอม ${terms[0]}`
+      } else if (terms.length > 0) {
+        termDisplay = terms.map((t) => `เทอม ${t}`).join(', ')
+      }
+
+      return {
+        ...master,
+        terms,
+        termDisplay,
+      }
+    })
+
+    setCourses(updated)
+  }
+
+  // Fetch status and sync with courses.json or backend DB if available
   const syncWithBackend = async () => {
     setIsSyncing(true)
+    let dataLoaded = false
+
     try {
-      const [statusRes, coursesRes] = await Promise.allSettled([
-        getStatus(),
-        getCourses(),
-      ])
-
-      if (statusRes.status === 'fulfilled') {
-        setStatus(statusRes.value)
-        setBackendConnected(true)
+      // 1. Try static courses.json first (GitHub Pages mode)
+      try {
+        const jsonRes = await fetch('./courses.json?t=' + Date.now())
+        if (jsonRes.ok) {
+          const json = await jsonRes.json()
+          if (json.items && json.items.length > 0) {
+            applyScrapedCourses(json.items)
+            setStatus({
+              last_run: json.updated_at,
+              last_run_thai: json.updated_at_thai,
+              last_count: json.total_scraped,
+            })
+            setBackendConnected(true)
+            dataLoaded = true
+          }
+        }
+      } catch {
+        // Fallback to API
       }
 
-      if (coursesRes.status === 'fulfilled' && coursesRes.value?.items?.length > 0) {
-        setBackendConnected(true)
-        const scrapedItems = coursesRes.value.items
+      // 2. If API is available (Local dev mode / Docker)
+      if (!dataLoaded) {
+        try {
+          const [statusRes, coursesRes] = await Promise.allSettled([
+            getStatus(),
+            getCourses(),
+          ])
 
-        // Group scraped items by course code (normalized without spaces)
-        const scrapedByCode = new Map()
-        scrapedItems.forEach((c) => {
-          const normCode = (c.code || '').replace(/\s+/g, '').toUpperCase()
-          if (!normCode) return
-          if (!scrapedByCode.has(normCode)) {
-            scrapedByCode.set(normCode, new Set())
-          }
-          if (c.semester) {
-            scrapedByCode.get(normCode).add(String(c.semester))
-          }
-        })
-
-        // Merge with master courses
-        const updated = ELECTIVE_COURSES.map((master) => {
-          const normCode = master.code.replace(/\s+/g, '').toUpperCase()
-          const termSet = scrapedByCode.get(normCode)
-
-          if (!termSet || termSet.size === 0) {
-            return master
+          if (statusRes.status === 'fulfilled') {
+            setStatus(statusRes.value)
+            setBackendConnected(true)
           }
 
-          const terms = Array.from(termSet).sort()
-          let termDisplay = 'ไม่มีข้อมูล'
-
-          if (terms.includes('1') && terms.includes('2') && terms.includes('3')) {
-            termDisplay = 'เปิดทุกเทอม'
-          } else if (terms.length === 1) {
-            termDisplay = `เทอม ${terms[0]}`
-          } else if (terms.length > 0) {
-            termDisplay = terms.map((t) => `เทอม ${t}`).join(', ')
+          if (coursesRes.status === 'fulfilled' && coursesRes.value?.items?.length > 0) {
+            applyScrapedCourses(coursesRes.value.items)
+            setBackendConnected(true)
+            dataLoaded = true
           }
-
-          return {
-            ...master,
-            terms,
-            termDisplay,
-          }
-        })
-
-        setCourses(updated)
+        } catch {
+          // Ignore
+        }
       }
-    } catch {
-      setBackendConnected(false)
+
+      if (!dataLoaded) {
+        setBackendConnected(false)
+      }
     } finally {
       setIsSyncing(false)
     }
@@ -137,10 +169,11 @@ export default function HomePage() {
       return { text: 'กำลังซิงค์ข้อมูล...', color: '#D97706' }
     }
     if (backendConnected) {
-      return { text: 'ซิงค์กับ REG มทส. แล้ว', color: '#16A34A' }
+      const timeStr = status?.last_run_thai ? ` (${status.last_run_thai})` : ''
+      return { text: `ซิงค์กับ REG มทส. แล้ว${timeStr}`, color: '#16A34A' }
     }
     return { text: 'โหมด Master Data', color: '#B95C44' }
-  }, [isSyncing, backendConnected])
+  }, [isSyncing, backendConnected, status])
 
   return (
     <div className="sheets-container">

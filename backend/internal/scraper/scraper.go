@@ -38,8 +38,8 @@ func GetStatus() Status {
 	return status
 }
 
-// scrapeSutPost ดึงข้อมูลจากฟอร์ม class_info_1.asp ของ REG มทส. (HTTP POST)
-func scrapeSutPost(cfg *config.Config, year, semester, prefix string) ([]models.Course, error) {
+// ScrapeSutPost ดึงข้อมูลจากฟอร์ม class_info_1.asp ของ REG มทส. (HTTP POST)
+func ScrapeSutPost(cfg *config.Config, year, semester, prefix string) ([]models.Course, error) {
 	postURL := cfg.ScrapePostURL
 	if postURL == "" {
 		postURL = "https://reg2.sut.ac.th/registrar/class_info_1.asp?avs710615754=2&backto=home"
@@ -201,7 +201,7 @@ func Run(cfg *config.Config, db *gorm.DB) {
 	for _, y := range cfg.Years {
 		for _, s := range cfg.Semesters {
 			for _, prefix := range prefixes {
-				courses, err := scrapeSutPost(cfg, y, s, prefix)
+				courses, err := ScrapeSutPost(cfg, y, s, prefix)
 				if err != nil {
 					e := fmt.Sprintf("%s/%s (%s): %v", y, s, prefix, err)
 					log.Println("scrape error:", e)
