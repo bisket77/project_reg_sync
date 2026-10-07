@@ -31,7 +31,7 @@ func main() {
 
 	prefixes := cfg.CoursePrefixes
 	if len(prefixes) == 0 {
-		prefixes = []string{"ENG23*", "ENG20*"}
+		prefixes = []string{"ENG23*", "ENG20*", "IST*", "114*", "202*", "214*", "224*", "245*", "303*", "523*", "551*", "601*", "609*", "617*"}
 	}
 
 	for _, y := range cfg.Years {
@@ -80,16 +80,15 @@ func main() {
 	}
 
 	// Output paths
-	destPaths := []string{
+	destCandidates := []string{
 		filepath.Join("..", "frontend", "public", "courses.json"),
 		filepath.Join("frontend", "public", "courses.json"),
-		filepath.Join(".", "courses.json"),
 	}
 
 	written := false
-	for _, p := range destPaths {
+	for _, p := range destCandidates {
 		dir := filepath.Dir(p)
-		if err := os.MkdirAll(dir, 0755); err == nil {
+		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
 			if err := os.WriteFile(p, jsonBytes, 0644); err == nil {
 				log.Printf("Saved: %s (%d records)\n", p, len(allCourses))
 				written = true
@@ -98,7 +97,7 @@ func main() {
 	}
 
 	if !written {
-		log.Println("Warning: could not write to default destination paths, wrote to current directory")
+		log.Println("Notice: wrote courses.json to current working directory as fallback")
 		_ = os.WriteFile("courses.json", jsonBytes, 0644)
 	}
 

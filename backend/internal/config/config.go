@@ -46,7 +46,7 @@ func Load() *Config {
 		AllowedOrigin: get("ALLOWED_ORIGIN", "*"), AdminToken: get("ADMIN_TOKEN", ""),
 		ScrapeURL:      get("SCRAPE_URL_TEMPLATE", ""),
 		ScrapePostURL:  get("SCRAPE_POST_URL", "https://reg2.sut.ac.th/registrar/class_info_1.asp?avs710615754=2&backto=home"),
-		CoursePrefixes: list("SCRAPE_COURSE_PREFIXES", "ENG23*,ENG20*"),
+		CoursePrefixes: list("SCRAPE_COURSE_PREFIXES", "ENG23*,ENG20*,IST*,114*,202*,214*,224*,245*,303*,523*,551*,601*,609*,617*"),
 		ScrapeCookie:   get("SCRAPE_COOKIE", ""),
 		Years:          list("SCRAPE_YEARS", "2567,2568"),
 		Semesters:      list("SCRAPE_SEMESTERS", "1,2,3"),

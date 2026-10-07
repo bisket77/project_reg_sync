@@ -137,6 +137,10 @@ func ScrapeSutPost(cfg *config.Config, year, semester, prefix string) ([]models.
 		credTd := tds.Eq(linkTdIdx + 2)
 		credits := strings.TrimSpace(credTd.Text())
 
+		// Exam schedules: Midterm (idx+3) & Final (idx+4)
+		midtermText := strings.TrimSpace(tds.Eq(linkTdIdx + 3).Text())
+		finalText := strings.TrimSpace(tds.Eq(linkTdIdx + 4).Text())
+
 		// Times / Schedule
 		timeTd := tds.Eq(linkTdIdx + 5)
 		times := strings.Join(strings.Fields(timeTd.Text()), " ")
@@ -156,6 +160,8 @@ func ScrapeSutPost(cfg *config.Config, year, semester, prefix string) ([]models.
 			"กลุ่ม":         sec,
 			"ชื่อวิชา":       cleanName,
 			"หน่วยกิต":      credits,
+			"สอบกลางภาค":     strings.Join(strings.Fields(midtermText), " "),
+			"สอบปลายภาค":     strings.Join(strings.Fields(finalText), " "),
 			"เวลาเรียน":      times,
 			"จำนวนรับ":      capText,
 			"ลงทะเบียน":     enrolledText,
