@@ -4,10 +4,9 @@ on:
   push:
     branches: [main]
   schedule:
-    # Run every 6 hours automatically (UTC)
-    - cron: '0 */6 * * *'
+    # รันอัตโนมัติวันละ 1 ครั้ง เวลา 00:00 น. (เที่ยงคืนเวลาไทย = 17:00 UTC)
+    - cron: '0 17 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
-
 permissions:
   contents: write
   pages: write
