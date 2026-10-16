@@ -12,13 +12,37 @@ import (
 func Setup(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CORS(cfg.AllowedOrigin))
-	h := &controllers.CourseController{DB: db, Cfg: cfg}
+
+	courseCtrl := &controllers.CourseController{DB: db, Cfg: cfg}
+	authCtrl := &controllers.AuthController{DB: db, Secret: cfg.AdminToken}
+	gradeCtrl := &controllers.GradeController{DB: db}
+
 	api := r.Group("/api")
 	{
-		api.GET("/courses", h.List)
-		api.GET("/terms", h.Terms)
-		api.GET("/status", h.Status)
-		api.POST("/scrape", h.Scrape)
+		// Public Course viewer routes
+		api.GET("/courses", courseCtrl.List)
+		api.GET("/terms", courseCtrl.Terms)
+		api.GET("/status", courseCtrl.Status)
+		api.POST("/scrape", courseCtrl.Scrape)
+
+		// Public Auth routes
+		api.POST("/auth/login", authCtrl.Login)
+
+		// Protected Auth routes
+		authGroup := api.Group("/auth")
+		authGroup.Use(controllers.AuthMiddleware(cfg.AdminToken))
+		{
+			authGroup.GET("/me", authCtrl.Me)
+		}
+
+		// Protected Grade Calculation routes
+		gradeGroup := api.Group("/grade")
+		gradeGroup.Use(controllers.AuthMiddleware(cfg.AdminToken))
+		{
+			gradeGroup.GET("/data", gradeCtrl.GetGradeData)
+			gradeGroup.POST("/data", gradeCtrl.SaveGradeData)
+			gradeGroup.POST("/reset", gradeCtrl.ResetGradeData)
+		}
 	}
 	return r
 }

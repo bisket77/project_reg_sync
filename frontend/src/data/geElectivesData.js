@@ -1,4 +1,14 @@
 export const GE_ELECTIVE_COURSES = [
+  {
+    code: 'ENG20 1110',
+    nameEn: 'PERSONAL FINANCE',
+    nameTh: 'การเงินส่วนบุคคล',
+    credits: '2 (2-0-4)',
+    category: 'ศึกษาทั่วไปแบบเลือก',
+    programType: 'ปกติ',
+    terms: ['1', '2', '3'],
+    termDisplay: 'เปิดทุกเทอม',
+  },
   // 1. ศิลปวิจักษ์ (ART APPRECIATION)
   {
     code: 'IST20 1505',

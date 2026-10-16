@@ -9,6 +9,7 @@ import (
 	"project_see_subject/internal/models"
 	"project_see_subject/internal/routes"
 	"project_see_subject/internal/scraper"
+	"project_see_subject/internal/seed"
 )
 
 func main() {
@@ -18,9 +19,23 @@ func main() {
 	if err != nil {
 		log.Fatal("db: ", err)
 	}
-	if err := db.AutoMigrate(&models.Course{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.Course{},
+		&models.User{},
+		&models.GradeScale{},
+		&models.GradeRange{},
+		&models.UserCourse{},
+		&models.ScoreTemplate{},
+		&models.ScoreColumn{},
+		&models.CourseScoreRecord{},
+		&models.UserGradeState{},
+	); err != nil {
 		log.Fatal("migrate: ", err)
 	}
+
+	// Seed initial administrator account and grading scales
+	seed.SeedDatabase(db)
+
 	if (cfg.ScrapePostURL != "" || cfg.ScrapeURL != "") && len(cfg.Years) > 0 {
 		scraper.Start(cfg, db)
 	} else {

@@ -6,16 +6,30 @@ import { ELECTIVE_COURSES } from '../data/electivesData.js'
 import { CORE_COURSES } from '../data/coreCoursesData.js'
 import { GE_ELECTIVE_COURSES } from '../data/geElectivesData.js'
 import { FREE_ELECTIVE_COURSES } from '../data/freeElectivesData.js'
+import { INITIAL_CURRICULUM_STRUCTURE, CURRICULUM_CATEGORIES } from '../data/cpeCurriculum2567Data.js'
 import { getCourses, getStatus } from '../services/api.js'
-import { SearchIcon, RefreshIcon, CloseIcon, StatusDotIcon } from '../components/Icons.jsx'
+import {
+  SearchIcon,
+  RefreshIcon,
+  CloseIcon,
+  StatusDotIcon,
+  MenuIcon,
+  LockIcon,
+  UserIcon,
+  LogoutIcon,
+  ExternalLinkIcon,
+} from '../components/Icons.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
-export default function HomePage() {
-  const [mainCategory, setMainCategory] = useState('core') // 'core', 'elective', 'ge_elective', 'free_elective'
-  const [selectedYear, setSelectedYear] = useState('all') // 'all', '1', '2', '3', '4'
+export default function HomePage({ onToggleMobile }) {
+  const { user, isAuthenticated, logout, openLoginModal } = useAuth()
+  const [mainCategory, setMainCategory] = useState('plan') // 'plan', 'core', 'elective', 'ge_elective', 'free_elective'
+  const [selectedYear, setSelectedYear] = useState('2') // 'all', '1', '2', '3', '4'
   const [selectedSubCat, setSelectedSubCat] = useState('all')
-  const [activeTab, setActiveTab] = useState('ALL') // 'ALL', '1', '2', '3'
+  const [activeTab, setActiveTab] = useState('1') // 'ALL', '1', '2', '3'
   const [search, setSearch] = useState('')
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [copiedCode, setCopiedCode] = useState(null)
   const [allScrapedItems, setAllScrapedItems] = useState([])
   const [electiveList, setElectiveList] = useState(ELECTIVE_COURSES)
   const [coreList, setCoreList] = useState(CORE_COURSES)
@@ -24,6 +38,49 @@ export default function HomePage() {
   const [status, setStatus] = useState(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [backendConnected, setBackendConnected] = useState(false)
+
+  // Load saved or initial CPE curriculum plan (compulsory + electives by term)
+  const curriculumPlanData = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('cpe_curriculum_structure_2567')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved curriculum plan', e)
+    }
+    return INITIAL_CURRICULUM_STRUCTURE
+  }, [])
+
+  // Flattened courses from the curriculum plan across all years and terms
+  const allPlanCourses = useMemo(() => {
+    const list = []
+    curriculumPlanData.forEach((y) => {
+      y.terms.forEach((t) => {
+        t.courses.forEach((c) => {
+          list.push({
+            ...c,
+            yearId: y.yearId,
+            yearLabel: y.yearLabel,
+            yearTh: y.yearTh,
+            termId: t.termId,
+            termLabel: t.termLabel,
+            termTh: t.termTh,
+          })
+        })
+      })
+    })
+    return list
+  }, [curriculumPlanData])
+
+  const handleCopyCode = (e, code) => {
+    e.stopPropagation()
+    if (!code || code.includes('XXXX') || code === '-') return
+    navigator?.clipboard?.writeText(code)
+    setCopiedCode(code)
+    setTimeout(() => setCopiedCode((prev) => (prev === code ? null : prev)), 1500)
+  }
 
   // Dynamic sub-categories for core courses
   const coreSubCategories = useMemo(() => {
@@ -52,6 +109,10 @@ export default function HomePage() {
       {
         id: 'โครงงานและสหกิจศึกษา',
         label: `โครงงาน & สหกิจ (${coreList.filter((c) => c.subCategory === 'โครงงานและสหกิจศึกษา').length})`,
+      },
+      {
+        id: 'ศึกษาทั่วไปและพื้นฐานบังคับ',
+        label: `ศึกษาทั่วไป & พื้นฐาน (${coreList.filter((c) => c.subCategory === 'ศึกษาทั่วไปและพื้นฐานบังคับ').length})`,
       },
     ]
   }, [coreList])
@@ -109,17 +170,35 @@ export default function HomePage() {
   }
 
 function formatThaiDateTime(date = new Date()) {
-  const thaiMonths = [
-    'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
-  ]
-  const day = date.getDate()
-  const month = thaiMonths[date.getMonth()]
-  const year = date.getFullYear() + 543
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${day} ${month} ${year} ${hours}:${minutes} น.`
+  const d = date instanceof Date ? date : new Date(date)
+  const day = d.getDate()
+  const month = d.getMonth() + 1
+  const year2 = String(d.getFullYear() + 543).slice(-2)
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  return `${day}/${month}/${year2} ${hours}.${minutes} น.`
 }
+
+function formatShortThaiTime(val) {
+  if (!val) return ''
+  const thaiMonths = {
+    'ม.ค.': 1, 'ก.พ.': 2, 'มี.ค.': 3, 'เม.ย.': 4, 'พ.ค.': 5, 'มิ.ย.': 6,
+    'ก.ค.': 7, 'ส.ค.': 8, 'ก.ย.': 9, 'ต.ค.': 10, 'พ.ย.': 11, 'ธ.ค.': 12
+  }
+  const match = String(val).match(/(\d{1,2})\s+([^\s]+)\s+(\d{4})\s+(\d{1,2})[:.](\d{2})/)
+  if (match) {
+    const [, d, mStr, yStr, h, min] = match
+    const m = thaiMonths[mStr] || mStr
+    const y2 = yStr.slice(-2)
+    return `${d}/${m}/${y2} ${String(h).padStart(2, '0')}.${min} น.`
+  }
+  const parsed = new Date(val)
+  if (!isNaN(parsed.getTime())) {
+    return formatThaiDateTime(parsed)
+  }
+  return String(val)
+}
+
 
   // Fetch status and sync with courses.json or backend DB if available
   const syncWithBackend = async (isManual = false) => {
@@ -210,6 +289,13 @@ function formatThaiDateTime(date = new Date()) {
   const pageTitle = useMemo(() => {
     let baseTitle = ''
     switch (mainCategory) {
+      case 'plan':
+        if (selectedYear !== 'all') {
+          baseTitle = `วิชาชีพบังคับและเลือก ชั้นปีที่ ${selectedYear} ตามแผนการเรียน 2567`
+        } else {
+          baseTitle = 'วิชาชีพบังคับและเลือก ตามแผนการเรียนวิศวกรรมคอมพิวเตอร์ (ปี 2567)'
+        }
+        break
       case 'core':
         if (selectedYear !== 'all') {
           baseTitle = `วิชาชีพบังคับ ชั้นปีที่ ${selectedYear} สาขาวิศวกรรมคอมพิวเตอร์`
@@ -246,6 +332,8 @@ function formatThaiDateTime(date = new Date()) {
   // Current list based on category
   const currentList = useMemo(() => {
     switch (mainCategory) {
+      case 'plan':
+        return allPlanCourses
       case 'core':
         return coreList
       case 'elective':
@@ -255,14 +343,50 @@ function formatThaiDateTime(date = new Date()) {
       case 'free_elective':
         return freeElectiveList
       default:
-        return coreList
+        return allPlanCourses
     }
-  }, [mainCategory, coreList, electiveList, geElectiveList, freeElectiveList])
+  }, [mainCategory, allPlanCourses, coreList, electiveList, geElectiveList, freeElectiveList])
 
   const currentTotal = currentList.length
 
+  // Filter courses from curriculum plan
+  const filteredPlanCourses = useMemo(() => {
+    if (mainCategory !== 'plan') return []
+
+    return allPlanCourses.filter((c) => {
+      // 1. Year filter
+      if (selectedYear !== 'all') {
+        if (String(c.yearId) !== String(selectedYear)) return false
+      }
+
+      // 2. Term filter
+      if (activeTab !== 'ALL') {
+        if (String(c.termId) !== String(activeTab)) return false
+      }
+
+      // 3. Search keyword filter
+      if (search.trim()) {
+        const q = search.trim().toLowerCase()
+        const codeMatch = c.code?.toLowerCase().includes(q)
+        const nameEnMatch = c.nameEn?.toLowerCase().includes(q)
+        const nameThMatch = c.nameTh?.toLowerCase().includes(q)
+        const credMatch = (c.creditsFull || String(c.credits))?.toLowerCase().includes(q)
+        const catObj = CURRICULUM_CATEGORIES[c.category]
+        const catMatch = catObj
+          ? (catObj.nameEn.toLowerCase().includes(q) || catObj.nameTh.toLowerCase().includes(q))
+          : false
+        const prereqMatch = c.prereq?.some((p) => p.toLowerCase().includes(q))
+        return codeMatch || nameEnMatch || nameThMatch || credMatch || catMatch || prereqMatch
+      }
+
+      return true
+    })
+  }, [allPlanCourses, mainCategory, selectedYear, activeTab, search])
+
   // Filter courses by category, year, sub-category, active tab and search query
   const filteredCourses = useMemo(() => {
+    if (mainCategory === 'plan') return filteredPlanCourses
+
     return currentList.filter((c) => {
       // 1. Year filter (only applicable for core courses)
       if (mainCategory === 'core' && selectedYear !== 'all') {
@@ -305,13 +429,13 @@ function formatThaiDateTime(date = new Date()) {
   // Status badge config
   const statusConfig = useMemo(() => {
     if (isSyncing) {
-      return { text: 'กำลังซิงค์ข้อมูล...', color: '#D97706' }
+      return { text: 'Syncing...', color: '#D97706' }
     }
     if (backendConnected) {
-      const timeStr = status?.last_run_thai ? ` (${status.last_run_thai})` : ''
-      return { text: `ซิงค์กับ REG มทส. แล้ว${timeStr}`, color: '#16A34A' }
+      const timeStr = status?.last_run_thai ? ` (${formatShortThaiTime(status.last_run_thai)})` : ''
+      return { text: `Synced${timeStr}`, color: '#16A34A' }
     }
-    return { text: 'โหมด Master Data', color: '#B95C44' }
+    return { text: 'Master Data', color: '#B95C44' }
   }, [isSyncing, backendConnected, status])
 
   // Get sections from scraped data for the currently selected course
@@ -330,15 +454,26 @@ function formatThaiDateTime(date = new Date()) {
 
   return (
     <div className="sheets-container">
-      {/* Top bar (Caesar Cluster Terracotta Theme) */}
+      {/* Top bar (Bisket Core Terracotta Theme) */}
       <header className="sheets-topbar">
         <div className="sheets-topbar-left">
-          <div className="sheets-brand-badge" title="Caesar Cluster">
-            C
+          {onToggleMobile && (
+            <button
+              type="button"
+              className="btn-mobile-sidebar-toggle"
+              onClick={onToggleMobile}
+              aria-label="เปิดเมนูนำทาง"
+              title="เปิดเมนู"
+            >
+              <MenuIcon size={20} />
+            </button>
+          )}
+          <div className="sheets-brand-badge" title="Bisket Core">
+            B
           </div>
           <div className="sheets-brand-info">
-            <span className="sheets-brand-title">Caesar Cluster</span>
-            <span className="sheets-brand-sub">Cloud for CPE · แผนการเรียนวิศวกรรมคอมพิวเตอร์ (REG Sync)</span>
+            <span className="sheets-brand-title">Bisket Core</span>
+            <span className="sheets-brand-sub">ดูรายวิชา (Course Viewer)</span>
           </div>
         </div>
 
@@ -361,6 +496,31 @@ function formatThaiDateTime(date = new Date()) {
             <RefreshIcon size={14} spin={isSyncing} />
             <span>{isSyncing ? 'กำลังโหลด...' : 'รีเฟรช'}</span>
           </button>
+
+          {/* Authentication button / User Badge */}
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="header-user-badge clickable"
+              onClick={logout}
+              title="ออกจากระบบ (คลิกเพื่อ Logout)"
+            >
+              <span className="header-user-avatar">
+                <UserIcon size={13} />
+              </span>
+              <span className="header-username">{user?.username || 'admin'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-header-login"
+              onClick={openLoginModal}
+              title="เข้าสู่ระบบจัดการเกรด"
+            >
+              <LockIcon size={13} />
+              <span>เข้าสู่ระบบ</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -369,6 +529,18 @@ function formatThaiDateTime(date = new Date()) {
         {/* Category Navigation (4 หมวดหลัก) */}
         <div className="category-nav-wrapper">
           <div className="category-nav-tabs">
+            <button
+              type="button"
+              className={`cat-tab-btn ${mainCategory === 'plan' ? 'active' : ''}`}
+              onClick={() => {
+                setMainCategory('plan')
+                setSelectedYear('2')
+                setActiveTab('1')
+                setSelectedSubCat('all')
+              }}
+            >
+              วิชาชีพบังคับ & เลือก ({allPlanCourses.length} วิชา)
+            </button>
             <button
               type="button"
               className={`cat-tab-btn ${mainCategory === 'core' ? 'active' : ''}`}
@@ -419,12 +591,46 @@ function formatThaiDateTime(date = new Date()) {
         {/* Title */}
         <h1 className="sheet-title">{pageTitle}</h1>
 
-        {/* Year Filter Buttons (ONLY for Core Compulsory courses) */}
-        {mainCategory === 'core' && (
+        {/* Row 1: ชั้นปี (สำหรับวิชาชีพบังคับ & เลือกตามแผน และวิชาชีพบังคับ) */}
+        {(mainCategory === 'core' || mainCategory === 'plan') && (
           <div className="year-selector-wrapper">
             <span className="filter-group-label">ชั้นปี:</span>
             <div className="year-tabs-group">
-              {yearOptions.map((yo) => (
+              {[
+                {
+                  id: 'all',
+                  label: 'ทั้งหมด',
+                  count: mainCategory === 'plan' ? allPlanCourses.length : coreList.length,
+                },
+                {
+                  id: '1',
+                  label: 'ชั้นปีที่ 1',
+                  count: mainCategory === 'plan'
+                    ? allPlanCourses.filter((c) => c.yearId === 1).length
+                    : coreList.filter((c) => String(c.year) === '1').length,
+                },
+                {
+                  id: '2',
+                  label: 'ชั้นปีที่ 2',
+                  count: mainCategory === 'plan'
+                    ? allPlanCourses.filter((c) => c.yearId === 2).length
+                    : coreList.filter((c) => String(c.year) === '2').length,
+                },
+                {
+                  id: '3',
+                  label: 'ชั้นปีที่ 3',
+                  count: mainCategory === 'plan'
+                    ? allPlanCourses.filter((c) => c.yearId === 3).length
+                    : coreList.filter((c) => String(c.year) === '3').length,
+                },
+                {
+                  id: '4',
+                  label: 'ชั้นปีที่ 4',
+                  count: mainCategory === 'plan'
+                    ? allPlanCourses.filter((c) => c.yearId === 4).length
+                    : coreList.filter((c) => String(c.year) === '4').length,
+                },
+              ].map((yo) => (
                 <button
                   key={yo.id}
                   type="button"
@@ -438,7 +644,20 @@ function formatThaiDateTime(date = new Date()) {
           </div>
         )}
 
-        {/* Sub-category Filter Chips (Only for Core Compulsory courses) */}
+        {/* Row 2: เทอม (SheetTabs - Tag เทอม) */}
+        <div className="term-selector-wrapper">
+          <span className="filter-group-label">เทอม:</span>
+          <SheetTabs
+            activeTab={activeTab}
+            onSelectTab={setActiveTab}
+            counts={{
+              showing: mainCategory === 'plan' ? filteredPlanCourses.length : filteredCourses.length,
+              total: mainCategory === 'plan' ? allPlanCourses.length : currentTotal,
+            }}
+          />
+        </div>
+
+        {/* Row 3: กลุ่มวิชา (สำหรับวิชาชีพบังคับแบบเดิม) */}
         {mainCategory === 'core' && (
           <div className="subcat-chips-wrapper">
             <span className="filter-group-label">กลุ่มวิชา:</span>
@@ -455,7 +674,7 @@ function formatThaiDateTime(date = new Date()) {
           </div>
         )}
 
-        {/* Full-width Search Bar placed directly under the title, spanning to the table */}
+        {/* Full-width Search Bar */}
         <div className="sheet-search-wrapper">
           <div className="search-bar-full">
             <span className="search-bar-icon">
@@ -464,7 +683,9 @@ function formatThaiDateTime(date = new Date()) {
             <input
               type="text"
               placeholder={
-                mainCategory === 'core'
+                mainCategory === 'plan'
+                  ? 'ค้นหารหัสวิชา หรือชื่อวิชาในแผน เช่น ENG23 2071, Electronics, ฟิสิกส์...'
+                  : mainCategory === 'core'
                   ? 'ค้นหารหัสวิชา หรือชื่อวิชาชีพบังคับ เช่น ENG23 2031, Data Structures, สถาปัตยกรรม...'
                   : mainCategory === 'elective'
                   ? 'ค้นหารหัสวิชา หรือชื่อวิชาเลือกสาขา เช่น ENG23 3012, Machine Learning, โครงงาน...'
@@ -487,24 +708,161 @@ function formatThaiDateTime(date = new Date()) {
               </button>
             )}
             <span className="search-count-pill">
-              แสดง {filteredCourses.length} จาก {currentTotal} วิชา
+              แสดง {mainCategory === 'plan' ? filteredPlanCourses.length : filteredCourses.length} จาก {mainCategory === 'plan' ? allPlanCourses.length : currentTotal} วิชา
             </span>
           </div>
         </div>
 
-        {/* Course Table */}
-        <CourseTable items={filteredCourses} onSelectCourse={setSelectedCourse} />
-      </main>
+        {/* Course Table: When mainCategory === 'plan', render the rich timetable-style table (Image 2) */}
+        {mainCategory === 'plan' ? (
+          <div className="term-courses-table-container">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 className="section-heading" style={{ margin: 0 }}>
+                รายวิชาบังคับและเลือกตามแผนการเรียน : {
+                  selectedYear === 'all' && activeTab === 'ALL'
+                    ? 'ทุกชั้นปี ทุกภาคการศึกษา (หลักสูตร CPE 2567)'
+                    : selectedYear === 'all'
+                    ? `ทุกชั้นปี เทอม ${activeTab}`
+                    : activeTab === 'ALL'
+                    ? `ชั้นปีที่ ${selectedYear} ทุกเทอม`
+                    : `ชั้นปีที่ ${selectedYear} เทอม ${activeTab}`
+                }
+              </h3>
+              <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>
+                {filteredPlanCourses.length} รายวิชา
+              </span>
+            </div>
 
-      {/* Sticky Google Sheets Bottom Bar */}
-      <SheetTabs
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        counts={{
-          showing: filteredCourses.length,
-          total: currentTotal,
-        }}
-      />
+            {filteredPlanCourses.length === 0 ? (
+              <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center', color: '#6B7280' }}>
+                ไม่พบรายวิชาตามเงื่อนไขที่เลือก
+              </div>
+            ) : (
+              <table className="term-courses-table">
+                <thead>
+                  <tr>
+                    <th>รหัสวิชา</th>
+                    <th>ชื่อวิชา (คลิกเพื่อดูรายละเอียด)</th>
+                    <th>หน่วยกิต</th>
+                    <th>กลุ่มวิชา</th>
+                    <th>วิชาบังคับก่อน</th>
+                    <th>กลุ่ม/เวลาเรียนจาก REG</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPlanCourses.map((c) => {
+                    const cat =
+                      CURRICULUM_CATEGORIES[c.category] || CURRICULUM_CATEGORIES.free_elec
+
+                    const norm = c.code.replace(/\s+/g, '').toUpperCase()
+                    const regMatches = allScrapedItems.filter(
+                      (sc) => (sc.code || '').replace(/\s+/g, '').toUpperCase() === norm
+                    )
+
+                    return (
+                      <tr key={c.id}>
+                        <td className="code-cell">
+                          <span
+                            className="code-tag"
+                            onClick={(e) => handleCopyCode(e, c.code)}
+                            title="คลิกเพื่อคัดลอกรหัสวิชา"
+                          >
+                            {c.code}
+                            {copiedCode === c.code && <span className="copy-ok">คัดลอก!</span>}
+                          </span>
+                        </td>
+                        <td
+                          className="name-cell clickable"
+                          onClick={() => setSelectedCourse(c)}
+                          title="คลิกเพื่อดูรายละเอียดรายวิชาและข้อมูลกลุ่มเรียน"
+                        >
+                          <div className="name-en-text">
+                            {c.nameEn}
+                            {(selectedYear === 'all' || activeTab === 'ALL') && (
+                              <span
+                                style={{
+                                  marginLeft: 8,
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  color: '#6B7280',
+                                  background: '#F3F4F6',
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                }}
+                              >
+                                ปี {c.yearId} เทอม {c.termId}
+                              </span>
+                            )}
+                          </div>
+                          {c.nameTh && <div className="name-th-text">{c.nameTh}</div>}
+                        </td>
+                        <td className="credits-cell">{c.creditsFull || `${c.credits} cr`}</td>
+                        <td>
+                          <span
+                            className="category-pill"
+                            style={{
+                              backgroundColor: cat.badge,
+                              color: cat.text,
+                              borderColor: cat.border,
+                            }}
+                          >
+                            {cat.nameEn}
+                          </span>
+                        </td>
+                        <td>
+                          {c.prereq && c.prereq.length > 0 ? (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {c.prereq.map((p) => (
+                                <span key={p} className="prereq-pill">
+                                  {p}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#9CA3AF' }}>-</span>
+                          )}
+                        </td>
+                        <td>
+                          {regMatches && regMatches.length > 0 ? (
+                            <div className="section-schedules-list">
+                              {regMatches.slice(0, 2).map((m, i) => (
+                                <div key={i} className="sec-item">
+                                  <strong>Sec {m.raw?.['กลุ่ม'] || m.raw?.['section'] || i + 1}:</strong>{' '}
+                                  {m.raw?.['วันเวลาเรียน'] || m.raw?.['เวลา'] || 'ไม่ระบุวันเวลา'}
+                                </div>
+                              ))}
+                              {regMatches.length > 2 && (
+                                <span className="more-sec-badge">
+                                  + อีก {regMatches.length - 2} กลุ่ม
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="search-reg-online-btn"
+                              onClick={() => {
+                                const url = `https://reg2.sut.ac.th/registrar/class_info.asp?backto=home&acadyear=2569&semester=2`
+                                window.open(url, '_blank', 'noopener,noreferrer')
+                              }}
+                              title="เปิดค้นหาตารางเรียนใน REG SUT"
+                            >
+                              <ExternalLinkIcon size={12} />
+                              <span>ตรวจใน REG SUT</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : (
+          <CourseTable items={filteredCourses} onSelectCourse={setSelectedCourse} />
+        )}
+      </main>
 
       {/* Course Detail Modal */}
       {selectedCourse && (

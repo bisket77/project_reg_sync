@@ -1,5 +1,14 @@
 export const ELECTIVE_COURSES = [
   {
+    code: 'ENG20 1110',
+    nameEn: 'PERSONAL FINANCE',
+    nameTh: 'การเงินส่วนบุคคล',
+    credits: '2 (2-0-4)',
+    category: 'วิชาเลือก',
+    terms: ['1', '2', '3'],
+    termDisplay: 'เปิดทุกเทอม',
+  },
+  {
     code: 'ENG20 2010',
     nameEn: 'MULTIDISCIPLINARY PROJECT BASED LEARNING 1',
     nameTh: 'การเรียนรู้โดยโครงงานสหวิทยาการเป็นฐาน 1',

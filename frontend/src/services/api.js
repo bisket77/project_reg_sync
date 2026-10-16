@@ -28,3 +28,38 @@ export const triggerScrape = (token) => {
     return res.json()
   })
 }
+
+export const getGradeData = async (token) => {
+  const res = await fetch(BASE + '/grade/data', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  return res.json()
+}
+
+export const saveGradeData = async (token, data) => {
+  const res = await fetch(BASE + '/grade/data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  return res.json()
+}
+
+export const resetGradeData = async (token) => {
+  const res = await fetch(BASE + '/grade/reset', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  return res.json()
+}
+
